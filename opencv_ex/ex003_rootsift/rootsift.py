@@ -17,10 +17,10 @@ class RootSIFT:
 
 		# apply the Hellinger kernel by first L1-normalizing, taking the
 		# square-root, and then L2-normalizing
-		#descs /= (np.linalg.norm(descs, axis=0, ord=2) + eps)
+		descs /= (np.linalg.norm(descs, axis=0, ord=2) + eps)
 		descs /= (descs.sum(axis=0) + eps)
 		descs = np.sqrt(descs)
-		descs /= (np.linalg.norm(descs, axis=0, ord=2) + eps)
+		#descs /= (np.linalg.norm(descs, axis=0, ord=2) + eps)
 
 		# return a tuple of the keypoints and descriptors
 		return (kps, descs)
