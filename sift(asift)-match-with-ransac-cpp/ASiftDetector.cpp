@@ -1,24 +1,8 @@
 #include "ASiftDetector.h"
 
-#include <iostream>
-
-//#include <opencv2/nonfree/features2d.hpp>
-//#include <opencv2/imgproc/imgproc.hpp>
-//#include <opencv2/highgui/highgui.hpp>
-
-#include "opencv/cv.h"
-#include "opencv/highgui.h"
-
-#include "opencv2/core/core.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/features2d/features2d.hpp"
-#include "opencv2/calib3d/calib3d.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/nonfree/nonfree.hpp"
-
 ASiftDetector::ASiftDetector()
 {
-    
+
 }
 
 void ASiftDetector::detectAndCompute(const Mat& img, std::vector< KeyPoint >& keypoints, Mat& descriptors)
@@ -32,12 +16,12 @@ void ASiftDetector::detectAndCompute(const Mat& img, std::vector< KeyPoint >& ke
         {
             std::vector<KeyPoint> kps;
             Mat desc;
-            
+
             Mat timg, mask, Ai;
             img.copyTo(timg);
-            
+
             affineSkew(t, phi, timg, mask, Ai);
-            
+
 #if 0
             Mat img_disp;
             bitwise_and(mask, timg, img_disp);
@@ -45,13 +29,13 @@ void ASiftDetector::detectAndCompute(const Mat& img, std::vector< KeyPoint >& ke
             imshow( "Skew", img_disp );
             waitKey(0);
 #endif
-            
+
             SiftFeatureDetector detector;
             detector.detect(timg, kps, mask);
-            
+
             SiftDescriptorExtractor extractor;
             extractor.compute(timg, kps, desc);
-            
+
             for(unsigned int i = 0; i < kps.size(); i++)
             {
                 Point3f kpt(kps[i].pt.x, kps[i].pt.y, 1);
@@ -69,19 +53,19 @@ void ASiftDetector::affineSkew(double tilt, double phi, Mat& img, Mat& mask, Mat
 {
     int h = img.rows;
     int w = img.cols;
-    
+
     mask = Mat(h, w, CV_8UC1, Scalar(255));
-    
+
     Mat A = Mat::eye(2,3, CV_32F);
-    
+
     if(phi != 0.0)
     {
         phi *= M_PI/180.;
         double s = sin(phi);
         double c = cos(phi);
-        
+
         A = (Mat_<float>(2,2) << c, -s, s, c);
-        
+
         Mat corners = (Mat_<float>(4,2) << 0, 0, w, 0, w, h, 0, h);
         Mat tcorners = corners*A.t();
         Mat tcorners_x, tcorners_y;
@@ -91,10 +75,10 @@ void ASiftDetector::affineSkew(double tilt, double phi, Mat& img, Mat& mask, Mat
         channels.push_back(tcorners_x);
         channels.push_back(tcorners_y);
         merge(channels, tcorners);
-        
+
         Rect rect = boundingRect(tcorners);
         A =  (Mat_<float>(2,3) << c, -s, -rect.x, s, c, -rect.y);
-        
+
         warpAffine(img, img, A, Size(rect.width, rect.height), INTER_LINEAR, BORDER_REPLICATE);
     }
     if(tilt != 1.0)
