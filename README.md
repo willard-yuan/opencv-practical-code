@@ -11,3 +11,6 @@ RANSAC剔除错配点可视化四个过程，其中1NN/2NN<0.8匹配过程是Low
 比SIFT要多得多，速度非常慢，不推荐在对要求实时性的应用中使用。
 
 更多详细的分析可以阅读博文[SIFT(ASIFT) Matching with RANSAC](http://yongyuan.name/blog/SIFT(ASIFT)-Matching-with-RANSAC.html)。
+
+##有用链接
+[OpenCV3.0文档](http://docs.opencv.org/master/index.html#gsc.tab=0)
