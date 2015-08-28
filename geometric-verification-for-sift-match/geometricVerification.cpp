@@ -2,6 +2,9 @@
 #include<time.h>
 #include<windows.h>
 #include "armadillo"
+
+#include "utils.h"
+
 using namespace arma;
 using namespace std;
 
@@ -89,34 +92,34 @@ mat toAffinity(mat &f){
 			A = [mapFromS(f(3:5)), T ; 0 0 1] ;
 			   }*/
 		default:
-			cout <<"³ö´íÀ²£¡"<<endl;
+			cout <<"å‡ºé”™å•¦ï¼"<<endl;
 			break;
 	}
 	return A;
 }
 
 int main(int argc, char** argv){
-	// ²ÎÊı
+	// å‚æ•°
 	opts.tolerance1 = 20 ;
 	opts.tolerance2 = 15 ;
 	opts.tolerance3 = 8 ;
 	opts.minInliers = 6 ;
-	opts.numRefinementIterations = 8 ; //ĞèÒª¸ü¸Ä
+	opts.numRefinementIterations = 8 ; //éœ€è¦æ›´æ”¹
 
-	//ÔØÈëÌØÕ÷µã
+	//è½½å…¥ç‰¹å¾ç‚¹
 	mat frames1, frames2, matches;
-	frames1.load("C:\\Users\\Administrator\\Desktop\\geometricVerification\\frames1.txt");
-	frames2.load("C:\\Users\\Administrator\\Desktop\\geometricVerification\\frames2.txt");
-	matches.load("C:\\Users\\Administrator\\Desktop\\geometricVerification\\matches_2nn.txt");
+	frames1.load("C:\\Users\\Administrator\\Desktop\\geometricVerification\\frames11.txt");
+	frames2.load("C:\\Users\\Administrator\\Desktop\\geometricVerification\\frames22.txt");
+	matches.load("C:\\Users\\Administrator\\Desktop\\geometricVerification\\matches_2nn1.txt");
 
-	// ²âÊÔÔØÈëÊÇ·ñ×¼È·
-	cout<< "element²âÊÔ: " << " x: " << frames1(0,1) << " y: " << frames1(1,1) <<endl; 
-	cout << " ĞĞÊı£º " << frames1.n_rows << " ÁĞÊı£º" << frames1.n_cols << endl;
+	// æµ‹è¯•è½½å…¥æ˜¯å¦å‡†ç¡®
+	cout<< "elementæµ‹è¯•: " << " x: " << frames1(0,1) << " y: " << frames1(1,1) <<endl; 
+	cout << " è¡Œæ•°ï¼š " << frames1.n_rows << " åˆ—æ•°ï¼š" << frames1.n_cols << endl;
 	cout << "==========================================================" << endl;
 
 	int numMatches = matches.n_cols;
-	// ²âÊÔÆ¥ÅäÊıÄ¿ÊÇ·ñ×¼È·
-	cout << "ÎªRANSACÇ°Æ¥ÅäÊıÄ¿£º " << numMatches << endl;
+	// æµ‹è¯•åŒ¹é…æ•°ç›®æ˜¯å¦å‡†ç¡®
+	cout << "ä¸ºRANSACå‰åŒ¹é…æ•°ç›®ï¼š " << numMatches << endl;
 	cout << "==========================================================" << endl;
 
 	field<uvec> inliers(1, numMatches);
@@ -128,19 +131,19 @@ int main(int argc, char** argv){
 
 	mat x1 = frames1(v, matchedIndex_Query) ;
 	mat x2 = frames2(v, matchedIndex_Object);
-	cout << " x1²éÑ¯Í¼ÏñÆ¥ÅäĞĞÊı£º " << x1.n_rows << " ²éÑ¯Í¼ÏñÆ¥ÅäÁĞÊı£º" << x1.n_cols << endl;
-	cout << " x2Ä¿±êÍ¼ÏñÆ¥ÅäĞĞÊı£º " << x2.n_rows << " Ä¿±êÍ¼ÏñÆ¥ÅäÁĞÊı£º" << x2.n_cols << endl;
-	cout<< "x1 element²âÊÔ: " << " x: " << x1(0,169) << " y: " << x1(1,169) <<endl; 
-	cout<< "x2 element²âÊÔ: " << " x: " << x2(0,1) << " y: " << x2(1,1) <<endl;
+	cout << " x1æŸ¥è¯¢å›¾åƒåŒ¹é…è¡Œæ•°ï¼š " << x1.n_rows << " æŸ¥è¯¢å›¾åƒåŒ¹é…åˆ—æ•°ï¼š" << x1.n_cols << endl;
+	cout << " x2ç›®æ ‡å›¾åƒåŒ¹é…è¡Œæ•°ï¼š " << x2.n_rows << " ç›®æ ‡å›¾åƒåŒ¹é…åˆ—æ•°ï¼š" << x2.n_cols << endl;
+	cout<< "x1 elementæµ‹è¯•: " << " x: " << x1(0,1) << " y: " << x1(1,1) <<endl; 
+	cout<< "x2 elementæµ‹è¯•: " << " x: " << x2(0,1) << " y: " << x2(1,1) <<endl;
 	cout << "==========================================================" << endl;
 
-	mat x1hom = join_cols(x1, ones<mat>(1, numMatches));  //ÔÚÏÂÃæÌí¼ÓÒ»ĞĞ£¬×¢ÒâºÍjoin_rowsµÄÇø±ğ
+	mat x1hom = join_cols(x1, ones<mat>(1, numMatches));  //åœ¨ä¸‹é¢æ·»åŠ ä¸€è¡Œï¼Œæ³¨æ„å’Œjoin_rowsçš„åŒºåˆ«
 	mat x2hom = join_cols(x2, ones<mat>(1, numMatches));
-	cout << " x1hom²éÑ¯Í¼ÏñÆ¥ÅäĞĞÊı£º " << x1hom.n_rows << " ²éÑ¯Í¼ÏñÆ¥ÅäÁĞÊı£º" << x1hom.n_cols << endl;
-	cout<< "x1hom element²âÊÔ: " << " x: " << x1hom(0,1) << " y: " << x1hom(1,1) << " z: " << x1hom(2,1) <<endl;
+	cout << " x1homæŸ¥è¯¢å›¾åƒåŒ¹é…è¡Œæ•°ï¼š " << x1hom.n_rows << " æŸ¥è¯¢å›¾åƒåŒ¹é…åˆ—æ•°ï¼š" << x1hom.n_cols << endl;
+	cout<< "x1hom elementæµ‹è¯•: " << " x: " << x1hom(0,1) << " y: " << x1hom(1,1) << " z: " << x1hom(2,1) <<endl;
 	cout << "==========================================================" << endl;
 
-	mat x1p, H21;  //×÷ÓÃÓò
+	mat x1p, H21;  //ä½œç”¨åŸŸ
 	double tol;
 	for(int m = 0; m < numMatches; ++m){
 		//cout << "m: " << m << endl;
@@ -212,7 +215,7 @@ int main(int argc, char** argv){
 				//x1p.print("x1p =");
 				tol = opts.tolerance3;
 			}
-			mat tmp = square(x2 - x1p); //¾«¶È¸úmatlabÏà±È¸ü¸ß£¿
+			mat tmp = square(x2 - x1p); //ç²¾åº¦è·Ÿmatlabç›¸æ¯”æ›´é«˜ï¼Ÿ
 			//tmp.print("tmp =");
 			mat dist2 = tmp.row(0) + tmp.row(1);
 			//dist2.print("dist2 =");
@@ -230,13 +233,37 @@ int main(int argc, char** argv){
 	for(int i = 0; i < numMatches; ++i){
 		scores.at(i) = inliers(0, i).n_rows;
 	}
-	scores.print("scores = ");
+	//scores.print("scores = ");
 	uword index;
 	scores.max(index);
 	cout << index << endl;
 	uvec inliers_final = inliers(0, index);
 	mat H_final = inv(H(0, index));
 	H_final.print("H_final = ");
+	//inliers_final.print("inliers_final = ");
+
+	//string src = "C:\\Users\\Administrator\\Desktop\\practical-instance-recognition-2015a\\data\\oxbuild_lite\\all_souls_000002.jpg";
+	//string obj = "C:\\Users\\Administrator\\Desktop\\practical-instance-recognition-2015a\\data\\oxbuild_lite\\all_souls_000015.jpg";
+
+	string src = "C:\\Users\\Administrator\\Desktop\\img1.jpg";
+	string obj = "C:\\Users\\Administrator\\Desktop\\img2.jpg";
+
+	vector<Point2f> srcPoints, dstPoints;
+	mat matches_geo = matches.cols(inliers_final);
+	//cout << matches_geo.n_rows << "+++++" <<matches_geo.n_cols << endl;
+	for (int i = 0; i < matches_geo.n_cols; ++i){
+		Point2f pt1, pt2;
+		//cout << matches_geo.at(0, i) << " " << matches_geo.at(1, i) << endl;
+		pt1.x = frames1.at(0, matches_geo.at(0, i)-1);
+		pt1.y = frames1.at(1, matches_geo.at(0, i)-1);
+		pt2.x = frames2.at(0, matches_geo.at(1, i)-1);
+		pt2.y = frames2.at(1, matches_geo.at(1, i)-1);
+		srcPoints.push_back(pt1);
+		dstPoints.push_back(pt2);
+	}
+
+	drawMatch(src, obj, srcPoints, dstPoints);
+
 	system("pause");
 	return 0;
 }
