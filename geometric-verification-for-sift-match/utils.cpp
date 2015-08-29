@@ -1,53 +1,77 @@
 #include "utils.h"
 
-// 画匹配的特征点对
-void drawMatch(const string &src, const string &obj, vector<Point2f> &srcPoints, vector<Point2f> &dstPoints){
-    // https://gist.github.com/thorikawa/3398619
-    Mat srcColorImage = imread(src);
-    Mat dstColorImage = imread(obj);
+/******************************************************************
+ * 函数功能：生成随机颜色
+ */
+static cv::Scalar randomColor(cv::RNG& rng)
+{
+    int icolor = (unsigned)rng;
+
+    return cv::Scalar(icolor&0xFF, (icolor>>8)&0xFF, (icolor>>16)&0xFF);
+}
+
+/******************************************************************
+ * 函数功能：画匹配的特征点对
+ * 参考：https://gist.github.com/thorikawa/3398619
+ */
+void plotMatches(const cv::Mat &srcColorImage, const cv::Mat &dstColorImage, vector<cv::Point2f> &srcPoints, vector<cv::Point2f> &dstPoints){
     
-    // Create a image for displaying mathing keypoints
-    Size sz = Size(srcColorImage.size().width + dstColorImage.size().width, srcColorImage.size().height + dstColorImage.size().height);
-    Mat matchingImage = Mat::zeros(sz, CV_8UC3);
+	// Create a image for displaying mathing keypoints
+    cv::Size sz = cv::Size(srcColorImage.size().width + dstColorImage.size().width, srcColorImage.size().height + dstColorImage.size().height);
+    cv::Mat matchingImage = cv::Mat::zeros(sz, CV_8UC3);
     
     // Draw camera frame
-    Mat roi1 = Mat(matchingImage, Rect(0, 0, srcColorImage.size().width, srcColorImage.size().height));
+    cv::Mat roi1 = cv::Mat(matchingImage, cv::Rect(0, 0, srcColorImage.size().width, srcColorImage.size().height));
     srcColorImage.copyTo(roi1);
     // Draw original image
-    Mat roi2 = Mat(matchingImage, Rect(srcColorImage.size().width, srcColorImage.size().height, dstColorImage.size().width, dstColorImage.size().height));
+    cv::Mat roi2 = cv::Mat(matchingImage, cv::Rect(srcColorImage.size().width, srcColorImage.size().height, 
+		dstColorImage.size().width, dstColorImage.size().height));
     dstColorImage.copyTo(roi2);
-    
+
+    cv::RNG rng(0xFFFFFFFF);
     // Draw line between nearest neighbor pairs
     for (int i = 0; i < (int)srcPoints.size(); ++i) {
-        Point2f pt1 = srcPoints[i];
-        Point2f pt2 = dstPoints[i];
-        Point2f from = pt1;
-        Point2f to   = Point(srcColorImage.size().width + pt2.x, srcColorImage.size().height + pt2.y);
-        line(matchingImage, from, to, Scalar(0, 255, 255), 2);
+        cv::Point2f pt1 = srcPoints[i];
+        cv::Point2f pt2 = dstPoints[i];
+        cv::Point2f from = pt1;
+        cv::Point2f to   = cv::Point(srcColorImage.size().width + pt2.x, srcColorImage.size().height + pt2.y);
+        cv::line(matchingImage, from, to, randomColor(rng), 2);
     }
+
+	// 在图像中显示匹配点数文本
+	/*Point org;
+    org.x = rng.uniform(matchingImage.cols/10, matchingImage.rows/10);
+    org.y = rng.uniform(matchingImage.rows/10, matchingImage.rows/10);
+	putText(matchingImage, "Testing text rendering", org, rng.uniform(0,8), rng.uniform(0,10)*0.05+0.1, randomColor(rng), rng.uniform(1, 10), 8);*/
+
     // Display mathing image
-    resize(matchingImage, matchingImage, Size(matchingImage.cols/2, matchingImage.rows/2));
-    //namedWindow( "Display frame",CV_WINDOW_AUTOSIZE);
-    imshow("Matched Points", matchingImage);
+    cv::resize(matchingImage, matchingImage, cv::Size(matchingImage.cols/2, matchingImage.rows/2));
+    cv::imshow("Geometric Verification", matchingImage);
     cvWaitKey(0);
 }
 
-void findInliers(vector<KeyPoint> &qKeypoints, vector<KeyPoint> &objKeypoints, vector<DMatch> &matches, const string &imgfn, const string &objFileName){
+
+/****************************************************************** 
+ * 函数功能：使用OpenCV自带的RANSAC寻找内点
+ * 
+ */
+void findInliers(vector<cv::KeyPoint> &qKeypoints, vector<cv::KeyPoint> &objKeypoints, 
+	vector<cv::DMatch> &matches, const cv::Mat &srcColorImage, const cv::Mat &dstColorImage){
     // 获取关键点坐标
-    vector<Point2f> queryCoord;
-    vector<Point2f> objectCoord;
-    for( int i = 0; i < matches.size(); i++){
+    vector<cv::Point2f> queryCoord;
+    vector<cv::Point2f> objectCoord;
+    for( unsigned int i = 0; i < matches.size(); i++){
         queryCoord.push_back((qKeypoints[matches[i].queryIdx]).pt);
         objectCoord.push_back((objKeypoints[matches[i].trainIdx]).pt);
     }
     // 使用自定义的函数显示匹配点对
-    drawMatch(imgfn, objFileName, queryCoord, objectCoord);
+    plotMatches(srcColorImage, dstColorImage, queryCoord, objectCoord);
     
     // 计算homography矩阵
-    Mat mask;
-    vector<Point2f> queryInliers;
-    vector<Point2f> sceneInliers;
-    Mat H = findFundamentalMat(queryCoord, objectCoord, mask, CV_FM_RANSAC);
+    cv::Mat mask;
+    vector<cv::Point2f> queryInliers;
+    vector<cv::Point2f> sceneInliers;
+    cv::Mat H = findFundamentalMat(queryCoord, objectCoord, mask, CV_FM_RANSAC);
     //Mat H = findHomography( queryCoord, objectCoord, CV_RANSAC, 10, mask);
     int inliers_cnt = 0, outliers_cnt = 0;
     for (int j = 0; j < mask.rows; j++){
@@ -60,5 +84,236 @@ void findInliers(vector<KeyPoint> &qKeypoints, vector<KeyPoint> &objKeypoints, v
         }
     }
     //显示剔除误配点对后的匹配点对
-    drawMatch(imgfn, objFileName, queryInliers, sceneInliers);
+    plotMatches(srcColorImage, dstColorImage, queryInliers, sceneInliers);
+}
+
+/****************************************************************/
+
+/*
+ * Returns the (stacking of the) 2x2 matrix A that maps the unit circle
+ * into the ellipses satisfying the equation x' inv(S) x = 1. Here S
+ * is a stacked covariance matrix, with elements S11, S12 and S22.
+ *
+mat mapFromS(mat &S){
+	tmp = sqrt(S(3,:)) + eps ;
+	A(1,1) = sqrt(S(1,:).*S(3,:) - S(2,:).^2) ./ tmp ;
+	A(2,1) = zeros(1,length(tmp));
+	A(1,2) = S(2,:) ./ tmp ;
+	A(2,2) = tmp ;
+	return A;
+}*/
+
+/******************************************************************
+ * 函数功能：几何校正需要调用的函数
+ * 
+ *
+ */
+arma::mat centering(arma::mat &x){
+	arma::mat tmp = -mean(x.rows(0, 1), 1);
+	arma::mat tmp2(2,2);
+	tmp2.eye();
+	arma::mat tmp1 = join_horiz(tmp2, tmp);
+	arma::mat v;
+	v << 0 << 0 << 1 << arma::endr;
+	arma::mat T = join_vert(tmp1, v);
+	//T.print("T =");
+	arma::mat xm = T * x;
+	//xm.print("xm =");
+	
+	//at least one pixel apart to avoid numerical problems
+	//xm.print("xm =");
+	double std11 = arma::stddev(xm.row(0));
+	//cout << "std11:" << std11 << endl;
+	double std22 = stddev(xm.row(1));
+	//cout << "std22:" << std22 << endl;
+
+	double std1 = max(std11, 1.0);
+	double std2 = max(std22, 1.0);
+	
+	arma::mat S;
+	S << 1/std1 << 0 << 0 << arma::endr
+	  << 0 << 1/std2 << 0 << arma::endr
+	  << 0 << 0 << 1 << arma::endr;
+	arma::mat C = S * T ;
+	//C.print("C =");
+	return C;
+}
+
+/*******************************************************************
+ * 函数功能：几何校正需要调用的函数
+ * 
+ *
+ */
+arma::mat toAffinity(arma::mat &f){
+	arma::mat A;
+	arma::mat v;
+	v << 0 << 0 << 1 << arma::endr;
+	int flag = f.n_rows;
+	switch(flag){
+		case 6:{ // oriented ellipses
+			arma::mat T = f.rows(0, 1);
+			arma::mat tmp = join_horiz(f.rows(2, 3), f.rows(4, 5));
+			arma::mat tmp1 = join_horiz(tmp, T);
+			A = join_vert(tmp1, v);
+			break;}
+		/*case 3:{    // discs
+			mat T = f.rows(0, 1);
+			mat s = f.row(2);
+			int th = 0 ;
+			A = [s*[cos(th) -sin(th) ; sin(th) cos(th)], T ; 0 0 1] ;
+			   }
+		case 4:{   // oriented discs
+			mat T = f.rows(0, 1);
+			mat s = f.row(2);
+			th = f(4) ;
+			A = [s*[cos(th) -sin(th) ; sin(th) cos(th)], T ; 0 0 1] ;
+			   }
+		case 5:{ // ellipses
+			mat T = f.rows(0, 1);
+			A = [mapFromS(f(3:5)), T ; 0 0 1] ;
+			   }*/
+		default:
+			cout <<"出错啦！"<<endl;
+			break;
+	}
+	return A;
+}
+
+/******************************************************************
+ * 函数功能：几何校正
+ * 
+ *
+ */
+arma::uvec geometricVerification(const arma::mat &frames1, const arma::mat &frames2, 
+	const arma::mat &matches, const superluOpts &opts){
+	// 测试载入是否准确
+	cout<< "element测试: " << " x: " << frames1(0,1) << " y: " << frames1(1,1) <<endl; 
+	cout << " 行数： " << frames1.n_rows << " 列数：" << frames1.n_cols << endl;
+	cout << "==========================================================" << endl;
+
+	int numMatches = matches.n_cols;
+	// 测试匹配数目是否准确
+	cout << "没有RANSAC前匹配数目： " << numMatches << endl;
+	cout << "==========================================================" << endl;
+
+	arma::field<arma::uvec> inliers(1, numMatches);
+	arma::field<arma::mat> H(1, numMatches);
+
+	arma::uvec v = arma::linspace<arma::uvec>(0,1,2);
+	arma::uvec matchedIndex_Query = arma::conv_to<arma::uvec>::from(matches.row(0)-1);
+	arma::uvec matchedIndex_Object = arma::conv_to<arma::uvec>::from(matches.row(1)-1);
+
+	arma::mat x1 = frames1(v, matchedIndex_Query) ;
+	arma::mat x2 = frames2(v, matchedIndex_Object);
+	cout << " x1查询图像匹配行数： " << x1.n_rows << " 查询图像匹配列数：" << x1.n_cols << endl;
+	cout << " x2目标图像匹配行数： " << x2.n_rows << " 目标图像匹配列数：" << x2.n_cols << endl;
+	cout<< "x1 element测试: " << " x: " << x1(0,1) << " y: " << x1(1,1) <<endl; 
+	cout<< "x2 element测试: " << " x: " << x2(0,1) << " y: " << x2(1,1) <<endl;
+	cout << "==========================================================" << endl;
+
+	arma::mat x1hom = arma::join_cols(x1, arma::ones<arma::mat>(1, numMatches));  //在下面添加一行，注意和join_rows的区别
+	arma::mat x2hom = arma::join_cols(x2, arma::ones<arma::mat>(1, numMatches));
+	cout << " x1hom查询图像匹配行数： " << x1hom.n_rows << " 查询图像匹配列数：" << x1hom.n_cols << endl;
+	cout<< "x1hom element测试: " << " x: " << x1hom(0,1) << " y: " << x1hom(1,1) << " z: " << x1hom(2,1) <<endl;
+	cout << "==========================================================" << endl;
+
+	arma::mat x1p, H21;  //作用域
+	double tol;
+	for(int m = 0; m < numMatches; ++m){
+		//cout << "m: " << m << endl;
+		for(unsigned int t = 0; t < opts.numRefinementIterations; ++t){
+			//cout << "t: " << t << endl;
+			if (t == 0){
+				arma::mat tmp1 = frames1.col(matches(0, m)-1);
+				arma::mat A1 = toAffinity(tmp1);
+				//A1.print("A1 =");
+				arma::mat tmp2 = frames2.col(matches(1, m)-1);
+				arma::mat A2 = toAffinity(tmp2);
+				//A2.print("A2 =");
+				H21 = A2 * inv(A1);
+				//H21.print("H21 =");
+				x1p = H21.rows(0, 1) * x1hom ;
+				//x1p.print("x1p =");
+				tol = opts.tolerance1;
+			}else if(t !=0 && t <= 3){
+				arma::mat A1 = x1hom.cols(inliers(0, m));
+				arma::mat A2 = x2.cols(inliers(0, m));
+				//A1.print("A1 =");
+				//A2.print("A2 =");
+		        H21 = A2*pinv(A1);
+				x1p = H21.rows(0, 1) * x1hom ;
+				//x1p.print("x1p =");
+				arma::mat v;
+				v << 0 << 0 << 1 << arma::endr;
+				H21 = join_vert(H21, v);
+				//H21.print("H21 =");
+				//x1p.print("x1p =");
+				tol = opts.tolerance2;
+			}else{
+				arma::mat x1in = x1hom.cols(inliers(0, m));
+				arma::mat x2in = x2hom.cols(inliers(0, m));
+				arma::mat S1 = centering(x1in);
+				arma::mat S2 = centering(x2in);
+				arma::mat x1c = S1 * x1in;
+				//x1c.print("x1c =");
+				arma::mat x2c = S2 * x2in;
+				//x2c.print("x2c =");
+				arma::mat A1 = arma::randu<arma::mat>(x1c.n_rows ,x1c.n_cols);
+				A1.zeros();
+				arma::mat A2 = arma::randu<arma::mat>(x1c.n_rows ,x1c.n_cols);
+				A2.zeros();
+				arma::mat A3 = arma::randu<arma::mat>(x1c.n_rows ,x1c.n_cols);
+				A3.zeros();
+				for(unsigned int i = 0; i < x1c.n_cols; ++i){
+					A2.col(i) = x1c.col(i)*(-x2c.row(0).col(i));
+					A3.col(i) = x1c.col(i)*(-x2c.row(1).col(i));
+				}
+				arma::mat T1 = join_cols(join_horiz(x1c, A1), join_horiz(A1, x1c));
+				arma::mat T2 = join_cols(T1, join_horiz(A2, A3));
+				//T2.print("T2 =");
+				arma::mat U;
+				arma::vec s;
+				arma::mat V;
+				svd_econ(U, s, V, T2);
+				//U.print("U =");
+				//V.print("V =");
+				arma::vec tmm = U.col(U.n_cols-1);
+				H21 = reshape(tmm, 3, 3).t();
+				H21 = inv(S2) * H21 * S1;
+				H21 = H21 / H21(H21.n_rows-1, H21.n_cols-1) ;
+				//H21.print("H21 =");
+				arma::mat x1phom = H21 * x1hom ;
+				arma::mat cc1 = x1phom.row(0) / x1phom.row(2);
+				arma::mat cc2 = x1phom.row(1) / x1phom.row(2);
+				arma::mat x1p = join_cols(cc1, cc2);
+				//x1p.print("x1p =");
+				tol = opts.tolerance3;
+			}
+			arma::mat tmp = arma::square(x2 - x1p); //精度跟matlab相比更高？
+			//tmp.print("tmp =");
+			arma::mat dist2 = tmp.row(0) + tmp.row(1);
+			//dist2.print("dist2 =");
+			inliers(0, m) = arma::find(dist2 < pow(tol, 2));
+			H(0, m) = H21;
+			//H(0, m).print("H(0, m) =");
+			//inliers(0, m).print("inliers(0, m) =");
+			//cout << inliers(0, m).size() << endl;
+			//cout << "==========================================================" << endl;
+			if (inliers(0, m).size() < opts.minInliers) break;
+			if (inliers(0, m).size() > 0.7 * numMatches) break;
+		}
+	}
+	arma::uvec scores(numMatches);
+	for(int i = 0; i < numMatches; ++i){
+		scores.at(i) = inliers(0, i).n_rows;
+	}
+	//scores.print("scores = ");
+	arma::uword index;
+	scores.max(index);
+	cout << index << endl;
+	arma::mat H_final = inv(H(0, index));
+	H_final.print("H_final = ");
+	arma::uvec inliers_final = inliers(0, index);
+	//inliers_final.print("inliers_final = ");
+	return inliers_final;
 }
