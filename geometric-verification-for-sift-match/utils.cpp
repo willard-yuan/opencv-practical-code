@@ -156,16 +156,25 @@ arma::mat toAffinity(arma::mat &f){
 			arma::mat tmp1 = join_horiz(tmp, T);
 			A = join_vert(tmp1, v);
 			break;}
+		case 4:{   // oriented discs
+			arma::mat T = f.rows(0, 1);
+			double s = f.at(2,0);
+			double th = f.at(3,0);
+			arma::mat S = arma::randu<arma::mat>(2,2);
+			/*S.at(0, 0) = s*cos(th);
+			S.at(0, 1) = -s*sin(th);
+			S.at(1, 0) = s*sin(th);
+			S.at(1, 1) = s*cos(th);*/
+			S << s*cos(th) << -s*sin(th) << arma::endr
+			  << s*sin(th) << s*cos(th)  << arma::endr;
+			arma::mat tmp1 = join_horiz(S, T);
+			A = join_vert(tmp1, v);
+			//A.print("A =");
+			break;}
 		/*case 3:{    // discs
 			mat T = f.rows(0, 1);
 			mat s = f.row(2);
 			int th = 0 ;
-			A = [s*[cos(th) -sin(th) ; sin(th) cos(th)], T ; 0 0 1] ;
-			   }
-		case 4:{   // oriented discs
-			mat T = f.rows(0, 1);
-			mat s = f.row(2);
-			th = f(4) ;
 			A = [s*[cos(th) -sin(th) ; sin(th) cos(th)], T ; 0 0 1] ;
 			   }
 		case 5:{ // ellipses
@@ -182,7 +191,7 @@ arma::mat toAffinity(arma::mat &f){
 /******************************************************************
  * 函数功能：几何校正
  * 
- *
+ * 待写：H_final的值也应该返回去
  */
 arma::uvec geometricVerification(const arma::mat &frames1, const arma::mat &frames2, 
 	const arma::mat &matches, const superluOpts &opts){
@@ -241,6 +250,7 @@ arma::uvec geometricVerification(const arma::mat &frames1, const arma::mat &fram
 				//A1.print("A1 =");
 				//A2.print("A2 =");
 		        H21 = A2*pinv(A1);
+				//H21.print("H21 =");
 				x1p = H21.rows(0, 1) * x1hom ;
 				//x1p.print("x1p =");
 				arma::mat v;
@@ -310,7 +320,7 @@ arma::uvec geometricVerification(const arma::mat &frames1, const arma::mat &fram
 	//scores.print("scores = ");
 	arma::uword index;
 	scores.max(index);
-	cout << index << endl;
+	//cout << index << endl;
 	arma::mat H_final = inv(H(0, index));
 	H_final.print("H_final = ");
 	arma::uvec inliers_final = inliers(0, index);
