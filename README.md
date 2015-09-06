@@ -14,3 +14,35 @@ RANSAC剔除错配点可视化四个过程，其中1NN/2NN<0.8匹配过程是Low
 
 ##有用链接
 [OpenCV3.0文档](http://docs.opencv.org/master/index.html#gsc.tab=0)
+
+```c++
+	// 测试sparse
+	unsigned int centersNum  = 10;
+	vector<unsigned int> descrNums;
+	descrNums.push_back(8);
+	descrNums.push_back(12);
+	//unsigned int T[] = {1, 2, 1, 3, 2, 5, 4, 3, 10, 5; 4, 2, 6, 5, 2, 5, 4, 6, 2, 4};
+	unsigned int T[] = {1, 2, 1, 3, 2, 5, 4, 3, 10, 5, 4, 2, 6, 5, 2, 5, 4, 6, 2, 4};
+	sp_mat Hist(descrNums.size(), centersNum);
+
+	static long int count = 0;
+	for (int i = 0; i < descrNums.size(); i++){
+		unsigned int* desrcElementsTmp = new unsigned int[descrNums[i]];
+		memcpy(desrcElementsTmp, T + count, descrNums[i] * sizeof(T[0]));
+		//cout << desrcElementsTmp[0] << '\t' << desrcElementsTmp[1] << '\t' << desrcElementsTmp[2] << '\t' << desrcElementsTmp[3] << '\t' << desrcElementsTmp[4] << '\t' <<endl;
+		//cout << desrcElementsTmp[5] << '\t' << desrcElementsTmp[6] << '\t' << desrcElementsTmp[7] << '\t' << desrcElementsTmp[8] << '\t' << desrcElementsTmp[9] << '\t' << desrcElementsTmp[10] << '\t' <<endl;
+		//cout << endl;
+
+		sp_mat X(1, centersNum);
+		X.zeros();
+		for (int j = 0; j < descrNums[i]; j++){
+			X(0, desrcElementsTmp[j]-1) += 1;
+		}
+		X.print("X:");
+		X = X/norm(X, 2);
+		Hist.row(i) = X;
+		count = count + descrNums[i];
+		delete desrcElementsTmp;
+	}
+	//Hist.print("Hist:");
+```
