@@ -2,6 +2,8 @@
 
 这是一个个人在使用OpenCV过程中写的一些小项目，以及一些非常有用的OpenCV代码，有些代码是对某论文中的部分实现。
 
+**注意**:代码是在Xcode里写的，如果要在win下测试，遇到问题自己修改。
+
 ##opencv-rootsift-py
 用python和OpenCV写的一个rootsift实现，其中RootSIFT部分的代码参照[Implementing RootSIFT in Python and OpenCV](https://www.pyimagesearch.com/2015/04/13/implementing-rootsift-in-python-and-opencv/)这篇文章所写，通过这个你可以了解**Three things everyone should know to improve object retrieval**这篇文章中RootSIFT是怎么实现的。
 
